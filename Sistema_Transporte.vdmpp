@@ -1,0 +1,250 @@
+-- CLASE: SistemaTransporte
+-- Descripción: Fachada del sistema, punto de entrada principal
+-- Responsabilidad: Coordinar todas las operaciones del sistema
+-- Patrón: Facade
+
+class SistemaTransporte
+
+instance variables
+  public buses: map seq of char to Bus;           -- Mapa de buses por placa
+  public rutas: map seq of char to Ruta;          -- Mapa de rutas por código
+  public conductores: map seq of char to Conductor; -- Mapa de conductores por DNI
+  public infracciones: seq of Infraccion;         -- Lista de infracciones
+  public nombreSistema: seq of char;              -- Nombre del sistema
+  public version: seq of char;                    -- Versión del sistema
+
+inv -- INVARIANTES GLOBALES:
+    -- Todas las placas deben ser válidas
+    forall placa in set dom buses & len placa > 0 and
+    -- Todas las rutas asignadas deben existir
+    forall placa in set dom buses & 
+      buses(placa).rutaAsignada.codigo in set dom rutas and
+    -- Todos los DNIs deben tener 8 dígitos
+    forall dni in set dom conductores & len dni = 8;
+
+operations
+  -- Constructor
+  public SistemaTransporte: () ==> SistemaTransporte
+  SistemaTransporte() == (
+    buses := {|->};
+    rutas := {|->};
+    conductores := {|->};
+    infracciones := [];
+    nombreSistema := "Sistema de Control de Transporte Publico - Arequipa";
+    version := "1.0";
+    return self;
+  )
+  post buses = {|->} and rutas = {|->} and conductores = {|->} and 
+       infracciones = [] and 
+       nombreSistema = "Sistema de Control de Transporte Publico - Arequipa" and
+       version = "1.0";
+
+  -- OPERACIONES DE REGISTRO
+
+  -- Registra una nueva ruta
+  public registrarRuta: Ruta ==> ()
+  registrarRuta(ruta) == (
+    rutas := rutas munion {ruta.codigo |-> ruta};
+  )
+  pre ruta.codigo not in set dom rutas
+  post ruta.codigo in set dom rutas;
+
+  -- Registra un nuevo bus
+  public registrarBus: Bus ==> ()
+  registrarBus(bus) == (
+    buses := buses munion {bus.placa |-> bus};
+  )
+  pre bus.placa not in set dom buses and 
+      bus.rutaAsignada.codigo in set dom rutas
+  post bus.placa in set dom buses;
+
+  -- Registra un nuevo conductor
+  public registrarConductor: Conductor ==> ()
+  registrarConductor(conductor) == (
+    conductores := conductores munion {conductor.dni |-> conductor};
+  )
+  pre conductor.dni not in set dom conductores
+  post conductor.dni in set dom conductores;
+
+  -- OPERACIONES CRÍTICAS
+
+  -- Registra una parada y valida si es oficial
+  -- Retorna true si es oficial, false y registra infracción si no lo es
+  public registrarParada: seq of char * Coordenada * nat ==> bool
+  registrarParada(placa, ubicacion, timestamp) == (
+    dcl bus: Bus := buses(placa);
+    dcl esOficial: bool := false;
+
+    for paradero in set elems bus.rutaAsignada.paraderos do (
+      if paradero.estaEnRadio(ubicacion) and paradero.esOficial then
+        esOficial := true;
+    );
+
+    if not esOficial then (
+      dcl infraccion: Infraccion := new Infraccion(
+        placa, ubicacion, timestamp,
+        "Parada fuera de paradero oficial", "GRAVE"
+      );
+      infracciones := infracciones ^ [infraccion];
+    );
+    return esOficial;
+  )
+  pre placa in set dom buses
+  post len infracciones >= len infracciones~ or RESULT = true;
+
+  -- Consulta el ETA de un bus a un paradero específico
+  public consultarETA: seq of char * seq of char ==> real
+  consultarETA(placa, codigoParadero) == (
+    dcl bus: Bus := buses(placa);
+    dcl paraderoDestino: Paradero := nil;
+    
+    for paradero in set elems bus.rutaAsignada.paraderos do (
+      if paradero.codigo = codigoParadero then
+        paraderoDestino := paradero;
+    );
+    
+    return bus.estimarTiempoArribo(paraderoDestino);
+  )
+  pre placa in set dom buses and 
+      exists paradero in set elems buses(placa).rutaAsignada.paraderos & 
+        paradero.codigo = codigoParadero
+  post RESULT >= 0;
+
+  -- CONSULTAS DE INFRACCIONES
+
+  -- Consulta infracciones de un bus específico
+  public consultarInfraccionesPorBus: seq of char ==> seq of Infraccion
+  consultarInfraccionesPorBus(placa) == (
+    dcl resultado: seq of Infraccion := [];
+    for infraccion in seq infracciones do (
+      if infraccion.idBus = placa then
+        resultado := resultado ^ [infraccion];
+    );
+    return resultado;
+  )
+  post forall i in set elems RESULT & i.idBus = placa;
+
+  -- Consulta infracciones por empresa
+  public consultarInfraccionesPorEmpresa: seq of char ==> seq of Infraccion
+  consultarInfraccionesPorEmpresa(nombreEmpresa) == (
+    dcl resultado: seq of Infraccion := [];
+    for infraccion in seq infracciones do (
+      if infraccion.idBus in set dom buses and 
+         buses(infraccion.idBus).empresa = nombreEmpresa then
+        resultado := resultado ^ [infraccion];
+    );
+    return resultado;
+  );
+
+  -- Consulta infracciones en un período de tiempo
+  public consultarInfraccionesPorPeriodo: nat * nat ==> seq of Infraccion
+  consultarInfraccionesPorPeriodo(inicio, fin) == (
+    dcl resultado: seq of Infraccion := [];
+    for infraccion in seq infracciones do (
+      if infraccion.fechaHora >= inicio and infraccion.fechaHora <= fin then
+        resultado := resultado ^ [infraccion];
+    );
+    return resultado;
+  )
+  pre inicio <= fin
+  post forall i in set elems RESULT & 
+    i.fechaHora >= inicio and i.fechaHora <= fin;
+
+  -- Cuenta infracciones pendientes
+  public contarInfraccionesPendientes: () ==> nat
+  contarInfraccionesPendientes() == (
+    dcl count: nat := 0;
+    for infraccion in seq infracciones do (
+      if not infraccion.procesada then
+        count := count + 1;
+    );
+    return count;
+  )
+  post RESULT >= 0 and RESULT <= len infracciones;
+
+  -- Obtiene el bus con más infracciones
+  public obtenerBusConMasInfracciones: () ==> seq of char
+  obtenerBusConMasInfracciones() == (
+    dcl maxPlaca: seq of char := "";
+    dcl maxCount: nat := 0;
+    
+    for placa in set dom buses do (
+      dcl count: nat := len consultarInfraccionesPorBus(placa);
+      if count > maxCount then (
+        maxCount := count;
+        maxPlaca := placa;
+      );
+    );
+    return maxPlaca;
+  )
+  pre len infracciones > 0;
+
+  -- CONSULTAS OPERATIVAS
+
+  -- Obtiene estadísticas generales del sistema
+  public obtenerEstadisticas: () ==> nat * nat * nat * nat
+  obtenerEstadisticas() == (
+    dcl totalBuses: nat := card dom buses;
+    dcl busesActivos: nat := 0;
+    dcl totalInfracciones: nat := len infracciones;
+    dcl infraccionesPendientes: nat := contarInfraccionesPendientes();
+    
+    for placa in set dom buses do (
+      if buses(placa).enServicio then
+        busesActivos := busesActivos + 1;
+    );
+    
+    return mk_(totalBuses, busesActivos, totalInfracciones, infraccionesPendientes);
+  );
+
+  -- Obtiene las rutas activas
+  public obtenerRutasActivas: () ==> seq of Ruta
+  obtenerRutasActivas() == (
+    dcl resultado: seq of Ruta := [];
+    for codigo in set dom rutas do (
+      if rutas(codigo).activa then
+        resultado := resultado ^ [rutas(codigo)];
+    );
+    return resultado;
+  )
+  post forall r in set elems RESULT & r.activa;
+
+  -- Obtiene buses operando en una ruta
+  public obtenerBusesEnRuta: seq of char ==> seq of Bus
+  obtenerBusesEnRuta(codigoRuta) == (
+    dcl resultado: seq of Bus := [];
+    for placa in set dom buses do (
+      if buses(placa).rutaAsignada.codigo = codigoRuta then
+        resultado := resultado ^ [buses(placa)];
+    );
+    return resultado;
+  )
+  pre codigoRuta in set dom rutas
+  post forall b in set elems RESULT & b.rutaAsignada.codigo = codigoRuta;
+
+  -- Valida si un conductor puede operar un bus
+  public validarConductorParaBus: seq of char * Bus * nat ==> bool
+  validarConductorParaBus(dni, bus, timestamp) == (
+    if dni not in set dom conductores then
+      return false;
+    
+    dcl conductor: Conductor := conductores(dni);
+    
+    -- Verifica licencia vigente
+    if not conductor.licenciaVigente(timestamp) then
+      return false;
+    
+    -- Verifica categoría adecuada según capacidad del bus
+    dcl categoria: seq of char := conductor.categoria;
+    if bus.capacidad <= 27 then
+      return categoria = "A-IIb"
+    elseif bus.capacidad <= 40 then
+      return categoria in set {"A-IIb", "A-IIIa"}
+    elseif bus.capacidad <= 90 then
+      return categoria in set {"A-IIb", "A-IIIa", "A-IIIb"}
+    else
+      return categoria = "A-IIIc";
+  )
+  pre dni in set dom conductores;
+
+end SistemaTransporte
