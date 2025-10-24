@@ -1,0 +1,42 @@
+-- CLASE: Paradero
+-- Descripción: Representa un punto de parada oficial en una ruta
+-- Responsabilidad: Validación geográfica de paradas
+
+class Paradero
+
+instance variables
+  public codigo: seq of char;      -- Código único del paradero
+  public nombre: seq of char;      -- Nombre descriptivo
+  public ubicacion: Coordenada;    -- Ubicación GPS del paradero
+  public esOficial: bool;          -- Indica si es paradero autorizado
+
+inv -- INVARIANTE: Código no vacío
+    len codigo > 0;
+
+operations
+  -- Constructor
+  public Paradero: seq of char * seq of char * Coordenada * bool ==> Paradero
+  Paradero(cod, nom, ubic, oficial) == (
+    codigo := cod;
+    nombre := nom;
+    ubicacion := ubic;
+    esOficial := oficial;
+    return self;
+  )
+  pre len cod > 0
+  post codigo = cod and nombre = nom and ubicacion = ubic and esOficial = oficial;
+
+  -- Verifica si una coordenada está dentro del radio de tolerancia (30 metros)
+  -- Justificación del radio:
+  -- - Precisión GPS civil: ±10 metros
+  -- - Longitud de bus estándar: 12 metros
+  -- - Margen de maniobra: 8 metros
+  -- Total: 30 metros de tolerancia
+  public estaEnRadio: Coordenada ==> bool
+  estaEnRadio(coord) == (
+    dcl distancia: real := ubicacion.calcularDistancia(coord);
+    return distancia <= 30.0;
+  )
+  post RESULT = (ubicacion.calcularDistancia(coord) <= 30.0);
+
+end Paradero
