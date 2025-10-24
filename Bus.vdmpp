@@ -1,0 +1,119 @@
+-- CLASE: Bus
+-- Descripción: Representa una unidad de transporte público
+-- Responsabilidad: Estado operacional, ETA, y gestión de pasajeros
+
+class Bus
+
+instance variables
+  public placa: seq of char;               -- Placa del vehículo
+  public empresa: seq of char;             -- Empresa operadora
+  public capacidad: nat1;                  -- Capacidad máxima de pasajeros
+  public rutaAsignada: Ruta;               -- Ruta asignada al bus
+  public ubicacionActual: Coordenada;      -- Ubicación GPS actual
+  public conductorActual: [Conductor];     -- Conductor asignado (opcional)
+  public enServicio: bool;                 -- Estado de servicio
+  public pasajerosActuales: nat;           -- Número actual de pasajeros
+
+inv -- INVARIANTES:
+    len placa > 0 and
+    capacidad >= 10 and capacidad <= 90 and
+    pasajerosActuales <= capacidad;
+
+operations
+  -- Constructor
+  public Bus: seq of char * seq of char * nat1 * Ruta * Coordenada ==> Bus
+  Bus(p, emp, cap, ruta, ubic) == (
+    placa := p;
+    empresa := emp;
+    capacidad := cap;
+    rutaAsignada := ruta;
+    ubicacionActual := ubic;
+    conductorActual := nil;
+    enServicio := false;
+    pasajerosActuales := 0;
+    return self;
+  )
+  pre len p > 0 and cap >= 10 and cap <= 90
+  post placa = p and empresa = emp and capacidad = cap and 
+       rutaAsignada = ruta and ubicacionActual = ubic and 
+       conductorActual = nil and enServicio = false and 
+       pasajerosActuales = 0;
+
+  -- Actualiza la ubicación del bus
+  public actualizarUbicacion: Coordenada ==> ()
+  actualizarUbicacion(nuevaUbic) == (
+    ubicacionActual := nuevaUbic;
+  )
+  post ubicacionActual = nuevaUbic;
+
+  -- Asigna un conductor al bus
+  public asignarConductor: Conductor ==> ()
+  asignarConductor(conductor) == (
+    conductorActual := conductor;
+  )
+  post conductorActual = conductor;
+
+  -- Cambia el estado de servicio
+  public cambiarEstadoServicio: bool ==> ()
+  cambiarEstadoServicio(estado) == (
+    enServicio := estado;
+  )
+  post enServicio = estado;
+
+  -- Sube pasajeros al bus
+  public subirPasajeros: nat ==> ()
+  subirPasajeros(cantidad) == (
+    pasajerosActuales := pasajerosActuales + cantidad;
+  )
+  pre pasajerosActuales + cantidad <= capacidad
+  post pasajerosActuales = pasajerosActuales~ + cantidad;
+
+  -- Baja pasajeros del bus
+  public bajarPasajeros: nat ==> ()
+  bajarPasajeros(cantidad) == (
+    pasajerosActuales := pasajerosActuales - cantidad;
+  )
+  pre cantidad <= pasajerosActuales
+  post pasajerosActuales = pasajerosActuales~ - cantidad;
+
+  -- Calcula el porcentaje de ocupación
+  public calcularOcupacion: () ==> real
+  calcularOcupacion() == (
+    return (pasajerosActuales * 100.0) / capacidad;
+  )
+  post RESULT >= 0 and RESULT <= 100;
+
+  -- ALGORITMO ETA (Estimated Time of Arrival)
+  -- Calcula el tiempo estimado de llegada a un paradero
+  -- Fórmula:
+  -- 1. Distancia euclidiana entre ubicación actual y paradero
+  -- 2. Conversión de velocidad: km/h → m/s
+  -- 3. Tiempo base: distancia / velocidad
+  -- 4. Ajuste por congestión
+  -- 5. Resultado en minutos
+  -- Precisión esperada: ±5 minutos
+  public estimarTiempoArribo: Paradero ==> real
+  estimarTiempoArribo(paraderoDestino) == (
+    dcl distancia: real := ubicacionActual.calcularDistancia(
+                           paraderoDestino.ubicacion);
+    dcl velocidadKmH: real := rutaAsignada.velocidadPromedio;
+    dcl velocidadMS: real := velocidadKmH * 1000.0 / 3600.0;
+    dcl tiempoBase: real := distancia / velocidadMS;
+    dcl tiempoAjustado: real := tiempoBase * rutaAsignada.factorCongestion;
+    dcl tiempoMinutos: real := tiempoAjustado / 60.0;
+    return tiempoMinutos;
+  )
+  pre enServicio = true
+  post RESULT >= 0;
+
+  -- Verifica si el bus está en un paradero oficial
+  public estaEnParaderoOficial: () ==> bool
+  estaEnParaderoOficial() == (
+    for paradero in set elems rutaAsignada.paraderos do (
+      if paradero.estaEnRadio(ubicacionActual) and paradero.esOficial then
+        return true;
+    );
+    return false;
+  );
+
+end Bus
