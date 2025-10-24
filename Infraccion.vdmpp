@@ -1,0 +1,43 @@
+-- CLASE: Infraccion
+-- Descripción: Registra una violación normativa
+-- Responsabilidad: Almacenar evidencia de infracciones
+
+class Infraccion
+
+instance variables
+  public idBus: seq of char;           -- Placa del bus infractor
+  public ubicacion: Coordenada;        -- Ubicación GPS de la infracción
+  public fechaHora: nat;               -- Timestamp de la infracción
+  public tipoInfraccion: seq of char;  -- Descripción del tipo
+  public gravedad: seq of char;        -- Nivel de gravedad
+  public procesada: bool;              -- Estado de procesamiento
+
+inv -- INVARIANTES:
+    len idBus > 0 and
+    fechaHora > 0 and
+    gravedad in set {"LEVE", "GRAVE", "MUY_GRAVE"};
+
+operations
+  -- Constructor
+  public Infraccion: seq of char * Coordenada * nat * seq of char * seq of char ==> Infraccion
+  Infraccion(bus, ubic, tiempo, tipo, grav) == (
+    idBus := bus;
+    ubicacion := ubic;
+    fechaHora := tiempo;
+    tipoInfraccion := tipo;
+    gravedad := grav;
+    procesada := false;
+    return self;
+  )
+  pre len bus > 0 and tiempo > 0 and grav in set {"LEVE", "GRAVE", "MUY_GRAVE"}
+  post idBus = bus and ubicacion = ubic and fechaHora = tiempo and 
+       tipoInfraccion = tipo and gravedad = grav and procesada = false;
+
+  -- Marca la infracción como procesada
+  public marcarProcesada: () ==> ()
+  marcarProcesada() == (
+    procesada := true;
+  )
+  post procesada = true;
+
+end Infraccion
