@@ -1,10 +1,8 @@
--- CLASE: Bus
--- Descripción: Representa una unidad de transporte público
--- Responsabilidad: Estado operacional, ETA, y gestión de pasajeros
-
 class Bus
 
 instance variables
+  -- ATRIBUTOS DEL DIAGRAMA DE CLASES
+  public id: seq of char;                  -- Identificador único del bus
   public placa: seq of char;               -- Placa del vehículo
   public empresa: seq of char;             -- Empresa operadora
   public capacidad: nat1;                  -- Capacidad máxima de pasajeros
@@ -14,15 +12,18 @@ instance variables
   public enServicio: bool;                 -- Estado de servicio
   public pasajerosActuales: nat;           -- Número actual de pasajeros
 
-inv -- INVARIANTES:
+inv -- INVARIANTES DE SEGURIDAD:
+    len id > 0 and
     len placa > 0 and
     capacidad >= 10 and capacidad <= 90 and
-    pasajerosActuales <= capacidad;
+    pasajerosActuales <= capacidad and
+    (enServicio = true => conductorActual <> nil);
 
 operations
-  -- Constructor
-  public Bus: seq of char * seq of char * nat1 * Ruta * Coordenada ==> Bus
-  Bus(p, emp, cap, ruta, ubic) == (
+  -- CONSTRUCTOR MEJORADO
+  public Bus: seq of char * seq of char * seq of char * nat1 * Ruta * Coordenada ==> Bus
+  Bus(id_bus, p, emp, cap, ruta, ubic) == (
+    id := id_bus;
     placa := p;
     empresa := emp;
     capacidad := cap;
@@ -33,87 +34,118 @@ operations
     pasajerosActuales := 0;
     return self;
   )
-  pre len p > 0 and cap >= 10 and cap <= 90
-  post placa = p and empresa = emp and capacidad = cap and 
+  pre len id_bus > 0 and len p > 0 and cap >= 10 and cap <= 90
+  post id = id_bus and placa = p and empresa = emp and capacidad = cap and 
        rutaAsignada = ruta and ubicacionActual = ubic and 
        conductorActual = nil and enServicio = false and 
        pasajerosActuales = 0;
 
-  -- Actualiza la ubicación del bus
+  -- ACTUALIZAR UBICACIÓN CON VALIDACIÓN
   public actualizarUbicacion: Coordenada ==> ()
   actualizarUbicacion(nuevaUbic) == (
     ubicacionActual := nuevaUbic;
   )
+  pre nuevaUbic <> nil
   post ubicacionActual = nuevaUbic;
 
-  -- Asigna un conductor al bus
-  public asignarConductor: Conductor ==> ()
+  -- ASIGNAR CONDUCTOR CON VALIDACIÓN DE LICENCIA
+  public asignarConductor: Conductor ==> bool
   asignarConductor(conductor) == (
-    conductorActual := conductor;
+    if conductor.licenciaValida() and conductor.activo then (
+      conductorActual := conductor;
+      return true;
+    )
+    else return false;
   )
-  post conductorActual = conductor;
+  pre conductor <> nil
+  post (RESULT = true => conductorActual = conductor) and
+       (RESULT = false => conductorActual = conductorActual~);
 
-  -- Cambia el estado de servicio
+  -- CAMBIAR ESTADO DE SERVICIO
   public cambiarEstadoServicio: bool ==> ()
   cambiarEstadoServicio(estado) == (
     enServicio := estado;
+    -- Si se desactiva el servicio, se libera el conductor
+    if estado = false then conductorActual := nil;
   )
-  post enServicio = estado;
+  post enServicio = estado and
+       (estado = false => conductorActual = nil);
 
-  -- Sube pasajeros al bus
-  public subirPasajeros: nat ==> ()
+  -- SUBIR PASAJEROS CON CONTROL DE CAPACIDAD
+  public subirPasajeros: nat ==> bool
   subirPasajeros(cantidad) == (
-    pasajerosActuales := pasajerosActuales + cantidad;
+    if pasajerosActuales + cantidad <= capacidad then (
+      pasajerosActuales := pasajerosActuales + cantidad;
+      return true;
+    )
+    else return false;  -- No se permiten más pasajeros
   )
-  pre pasajerosActuales + cantidad <= capacidad
-  post pasajerosActuales = pasajerosActuales~ + cantidad;
+  pre cantidad > 0 and enServicio = true
+  post (RESULT = true => pasajerosActuales = pasajerosActuales~ + cantidad) and
+       (RESULT = false => pasajerosActuales = pasajerosActuales~);
 
-  -- Baja pasajeros del bus
-  public bajarPasajeros: nat ==> ()
+  -- BAJAR PASAJEROS
+  public bajarPasajeros: nat ==> bool
   bajarPasajeros(cantidad) == (
-    pasajerosActuales := pasajerosActuales - cantidad;
+    if cantidad <= pasajerosActuales then (
+      pasajerosActuales := pasajerosActuales - cantidad;
+      return true;
+    )
+    else return false;
   )
-  pre cantidad <= pasajerosActuales
-  post pasajerosActuales = pasajerosActuales~ - cantidad;
+  pre cantidad > 0 and enServicio = true
+  post (RESULT = true => pasajerosActuales = pasajerosActuales~ - cantidad) and
+       (RESULT = false => pasajerosActuales = pasajerosActuales~);
 
-  -- Calcula el porcentaje de ocupación
+  -- CALCULAR PORCENTAJE DE OCUPACIÓN
   public calcularOcupacion: () ==> real
   calcularOcupacion() == (
     return (pasajerosActuales * 100.0) / capacidad;
   )
   post RESULT >= 0 and RESULT <= 100;
 
-  -- ALGORITMO ETA (Estimated Time of Arrival)
-  -- Calcula el tiempo estimado de llegada a un paradero
-  -- Fórmula:
-  -- 1. Distancia euclidiana entre ubicación actual y paradero
-  -- 2. Conversión de velocidad: km/h → m/s
-  -- 3. Tiempo base: distancia / velocidad
-  -- 4. Ajuste por congestión
-  -- 5. Resultado en minutos
-  -- Precisión esperada: ±5 minutos
-  public estimarTiempoArribo: Paradero ==> real
-  estimarTiempoArribo(paraderoDestino) == (
+  -- ETA MEJORADO SEGÚN RF03
+  public estimarTiempoArribo: Paradero * real * real ==> real
+  estimarTiempoArribo(paraderoDestino, factorCongestion, velocidadPromedio) == (
     dcl distancia: real := ubicacionActual.calcularDistancia(
-                           paraderoDestino.ubicacion);
-    dcl velocidadKmH: real := rutaAsignada.velocidadPromedio;
-    dcl velocidadMS: real := velocidadKmH * 1000.0 / 3600.0;
+                           paraderoDestino.obtenerUbicacion());
+    dcl velocidadMS: real := velocidadPromedio * 1000.0 / 3600.0;
     dcl tiempoBase: real := distancia / velocidadMS;
-    dcl tiempoAjustado: real := tiempoBase * rutaAsignada.factorCongestion;
+    dcl tiempoAjustado: real := tiempoBase * factorCongestion;
     dcl tiempoMinutos: real := tiempoAjustado / 60.0;
+    
+    -- Aplicar márgenes según RF03 (±5 minutos)
     return tiempoMinutos;
   )
-  pre enServicio = true
+  pre enServicio = true and paraderoDestino <> nil and
+       factorCongestion >= 0.5 and factorCongestion <= 3.0 and
+       velocidadPromedio > 0
   post RESULT >= 0;
 
-  -- Verifica si el bus está en un paradero oficial
-  public estaEnParaderoOficial: () ==> bool
-  estaEnParaderoOficial() == (
-    for paradero in set elems rutaAsignada.paraderos do (
-      if paradero.estaEnRadio(ubicacionActual) and paradero.esOficial then
+  -- VERIFICAR PARADA OFICIAL SEGÚN RF04
+  public validarParadaEnParadero: Coordenada * real ==> bool
+  validarParadaEnParadero(ubicacionParada, radioTolerancia) == (
+    for all paradero in seq rutaAsignada.obtenerParaderos() do (
+      if paradero.estaEnRadio(ubicacionParada, radioTolerancia) then
         return true;
     );
     return false;
+  )
+  pre ubicacionParada <> nil and radioTolerancia > 0;
+
+  -- OBTENER INFORMACIÓN DEL BUS PARA REPORTES
+  public obtenerInfoBus: () ==> map seq of char to ?
+  obtenerInfoBus() == (
+    return {
+      "id"            |-> id,
+      "placa"         |-> placa, 
+      "empresa"       |-> empresa,
+      "capacidad"     |-> capacidad,
+      "pasajeros"     |-> pasajerosActuales,
+      "ocupacion"     |-> calcularOcupacion(),
+      "en_servicio"   |-> enServicio,
+      "ruta"          |-> rutaAsignada.obtenerCodigo()
+    };
   );
 
 end Bus
