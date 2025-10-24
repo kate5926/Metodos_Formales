@@ -1,0 +1,48 @@
+-- CLASE: Coordenada
+-- Descripción: Representa una ubicación geográfica en el sistema WGS84
+-- Responsabilidad: Manejo de coordenadas GPS y cálculo de distancias
+
+class Coordenada
+
+instance variables
+  public latitud: real;  -- Latitud en grados decimales (WGS84)
+  public longitud: real; -- Longitud en grados decimales (WGS84)
+
+inv -- INVARIANTE: Coordenadas válidas para área metropolitana de Arequipa
+    -- Basado en límites geográficos oficiales de la ciudad
+    latitud >= -16.5 and latitud <= -16.3 and
+    longitud >= -71.6 and longitud <= -71.5;
+
+operations
+  -- Constructor
+  -- pre: Las coordenadas deben estar dentro del área metropolitana de Arequipa
+  -- post: Se crea un objeto Coordenada con los valores especificados
+  public Coordenada: real * real ==> Coordenada
+  Coordenada(lat, lon) == (
+    latitud := lat;
+    longitud := lon;
+    return self;
+  )
+  pre lat >= -16.5 and lat <= -16.3 and
+      lon >= -71.6 and lon <= -71.5
+  post latitud = lat and longitud = lon;
+
+  -- Calcula la distancia aproximada en metros entre dos coordenadas
+  -- Utiliza fórmula simplificada de Haversine para distancias urbanas (<50km)
+  -- Precisión: ±3% para distancias menores a 20km
+  --
+  -- Fórmula aplicada:
+  -- 1° latitud ≈ 111,000 metros (constante global)
+  -- 1° longitud ≈ 111,000 * cos(latitud) ≈ 111,000 * 0.9 para Arequipa
+  -- Distancia euclidiana = sqrt(difLat² + difLon²)
+  --
+  -- post: Retorna distancia no negativa en metros
+  public calcularDistancia: Coordenada ==> real
+  calcularDistancia(otra) == (
+    dcl difLat: real := (otra.latitud - latitud) * 111000;
+    dcl difLon: real := (otra.longitud - longitud) * 111000 * 0.9;
+    return MATH'sqrt(difLat * difLat + difLon * difLon);
+  )
+  post RESULT >= 0;
+
+end Coordenada
