@@ -1,0 +1,96 @@
+-- CLASE: Ruta
+-- Descripción: Define un corredor de transporte público
+-- Responsabilidad: Gestión de paraderos y parámetros de tiempo
+
+class Ruta
+
+instance variables
+  public codigo: seq of char;              -- Código de ruta
+  public nombre: seq of char;              -- Nombre de la ruta
+  public paraderos: seq of Paradero;       -- Secuencia ordenada de paraderos
+  public velocidadPromedio: real;          -- Velocidad promedio en km/h
+  public factorCongestion: real;           -- Factor de congestión (1.0 - 2.0)
+  public empresaOperadora: seq of char;    -- Empresa que opera la ruta
+  public activa: bool;                     -- Estado de la ruta
+
+inv -- INVARIANTES:
+    len codigo > 0 and
+    len paraderos >= 2 and
+    velocidadPromedio > 0 and velocidadPromedio <= 60 and
+    factorCongestion >= 1.0 and factorCongestion <= 2.0;
+
+operations
+  -- Constructor
+  public Ruta: seq of char * seq of char * seq of Paradero * real * seq of char ==> Ruta
+  Ruta(cod, nom, parad, vel, empresa) == (
+    codigo := cod;
+    nombre := nom;
+    paraderos := parad;
+    velocidadPromedio := vel;
+    factorCongestion := 1.0;
+    empresaOperadora := empresa;
+    activa := true;
+    return self;
+  )
+  pre len cod > 0 and len parad >= 2 and vel > 0 and vel <= 60
+  post codigo = cod and nombre = nom and paraderos = parad and 
+       velocidadPromedio = vel and factorCongestion = 1.0 and 
+       empresaOperadora = empresa and activa = true;
+
+  -- Actualiza el factor de congestión
+  public actualizarCongestion: real ==> ()
+  actualizarCongestion(factor) == (
+    factorCongestion := factor;
+  )
+  pre factor >= 1.0 and factor <= 2.0
+  post factorCongestion = factor;
+
+  -- Desactiva la ruta
+  public desactivar: () ==> ()
+  desactivar() == (
+    activa := false;
+  )
+  post activa = false;
+
+  -- Calcula la distancia total aproximada de la ruta
+  public distanciaTotal: () ==> real
+  distanciaTotal() == (
+    dcl total: real := 0.0;
+    for i = 1 to len paraderos - 1 do (
+      total := total + paraderos(i).ubicacion.calcularDistancia(
+                       paraderos(i+1).ubicacion);
+    );
+    return total;
+  )
+  post RESULT >= 0;
+
+  -- Encuentra el paradero más cercano a una coordenada
+  public paraderoMasCercano: Coordenada ==> nat1
+  paraderoMasCercano(coord) == (
+    dcl minDist: real := paraderos(1).ubicacion.calcularDistancia(coord);
+    dcl indiceMin: nat1 := 1;
+    for i = 2 to len paraderos do (
+      dcl dist: real := paraderos(i).ubicacion.calcularDistancia(coord);
+      if dist < minDist then (
+        minDist := dist;
+        indiceMin := i;
+      );
+    );
+    return indiceMin;
+  )
+  pre len paraderos > 0
+  post RESULT >= 1 and RESULT <= len paraderos;
+
+  -- Cuenta los paraderos oficiales
+  public contarParaderosOficiales: () ==> nat
+  contarParaderosOficiales() == (
+    dcl count: nat := 0;
+    for paradero in set elems paraderos do (
+      if paradero.esOficial then
+        count := count + 1;
+    );
+    return count;
+  )
+  post RESULT >= 0 and RESULT <= len paraderos;
+
+end Ruta
