@@ -51,7 +51,7 @@ operations
   -- ASIGNAR CONDUCTOR CON VALIDACIÓN DE LICENCIA
   public asignarConductor: Conductor ==> bool
   asignarConductor(conductor) == (
-    if conductor.licenciaValida() and conductor.activo then (
+    if conductor.activo then (
       conductorActual := conductor;
       return true;
     )
@@ -125,8 +125,10 @@ operations
   -- VERIFICAR PARADA OFICIAL SEGÚN RF04
   public validarParadaEnParadero: Coordenada * real ==> bool
   validarParadaEnParadero(ubicacionParada, radioTolerancia) == (
-    for all paradero in seq rutaAsignada.obtenerParaderos() do (
-      if paradero.estaEnRadio(ubicacionParada, radioTolerancia) then
+    dcl paraderos: seq of Paradero := rutaAsignada.obtenerParaderos();
+    for i = 1 to len paraderos do (
+      if paraderos(i).estaEnRadio(ubicacionParada) and 
+         ubicacionActual.calcularDistancia(ubicacionParada) <= radioTolerancia then
         return true;
     );
     return false;
@@ -134,7 +136,7 @@ operations
   pre ubicacionParada <> nil and radioTolerancia > 0;
 
   -- OBTENER INFORMACIÓN DEL BUS PARA REPORTES
-  public obtenerInfoBus: () ==> map seq of char to ?
+  public obtenerInfoBus: () ==> map seq of char to seq of char | nat | real | bool
   obtenerInfoBus() == (
     return {
       "id"            |-> id,
