@@ -37,6 +37,20 @@ operations
        velocidadPromedio = vel and factorCongestion = 1.0 and 
        empresaOperadora = empresa and activa = true;
 
+  -- Obtiene el código de la ruta
+  public obtenerCodigo: () ==> seq of char
+  obtenerCodigo() == (
+    return codigo;
+  )
+  post RESULT = codigo;
+
+  -- Obtiene la secuencia de paraderos
+  public obtenerParaderos: () ==> seq of Paradero
+  obtenerParaderos() == (
+    return paraderos;
+  )
+  post RESULT = paraderos;
+
   -- Actualiza el factor de congestión
   public actualizarCongestion: real ==> ()
   actualizarCongestion(factor) == (
@@ -85,8 +99,8 @@ operations
   public contarParaderosOficiales: () ==> nat
   contarParaderosOficiales() == (
     dcl count: nat := 0;
-    for paradero in set elems paraderos do (
-      if paradero.esOficial then
+    for i = 1 to len paraderos do (
+      if paraderos(i).esOficial then
         count := count + 1;
     );
     return count;
