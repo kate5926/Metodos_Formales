@@ -26,6 +26,13 @@ operations
   pre len cod > 0
   post codigo = cod and nombre = nom and ubicacion = ubic and esOficial = oficial;
 
+  -- Obtiene la ubicación del paradero
+  public obtenerUbicacion: () ==> Coordenada
+  obtenerUbicacion() == (
+    return ubicacion;
+  )
+  post RESULT = ubicacion;
+
   -- Verifica si una coordenada está dentro del radio de tolerancia (30 metros)
   -- Justificación del radio:
   -- - Precisión GPS civil: ±10 metros
