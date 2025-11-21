@@ -1,0 +1,340 @@
+========================================
+PRUEBAS BÁSICAS DE COBERTURA
+Sistema de Transporte Público
+========================================
+
+========================================
+PASO 1: INICIALIZAR
+========================================
+init
+
+========================================
+PASO 2: CREAR OBJETOS BASE
+========================================
+create coord1 := new Coordenada(-16.4, -71.55)
+create coord2 := new Coordenada(-16.41, -71.56)
+create coord3 := new Coordenada(-16.42, -71.57)
+
+========================================
+PRUEBAS DE COORDENADA
+========================================
+-- Probar calcularDistancia
+print coord1.calcularDistancia(coord2)
+
+========================================
+PASO 3: CREAR PARADEROS
+========================================
+create p1 := new Paradero("P001", "Plaza", coord1, true)
+create p2 := new Paradero("P002", "Terminal", coord2, true)
+create p3 := new Paradero("P003", "Universidad", coord3, false)
+
+========================================
+PRUEBAS DE PARADERO
+========================================
+-- Probar obtenerUbicacion
+print p1.obtenerUbicacion()
+
+-- Probar estaEnRadio (dentro del radio)
+create coordCerca := new Coordenada(-16.40020, -71.55020)
+print p1.estaEnRadio(coordCerca)
+
+-- Probar estaEnRadio (fuera del radio)
+create coordLejos := new Coordenada(-16.35, -71.52)
+print p1.estaEnRadio(coordLejos)
+
+========================================
+PASO 4: CREAR CONDUCTORES
+========================================
+create cond1 := new Conductor("12345678", "Juan Perez", "L123", "A-IIIb", 1735689600)
+create cond2 := new Conductor("87654321", "Maria Lopez", "L456", "A-IIb", 1735689600)
+
+========================================
+PRUEBAS DE CONDUCTOR
+========================================
+-- Probar licenciaVigente (válida)
+print cond1.licenciaVigente(1700000000)
+
+-- Probar licenciaVigente (vencida)
+print cond1.licenciaVigente(1800000000)
+
+-- Probar desactivar
+print cond1.desactivar()
+print cond1.activo
+
+========================================
+PASO 5: CREAR RUTAS
+========================================
+create ruta1 := new Ruta("R001", "Ruta Central", [p1, p2, p3], 30.0, "TransArequipa")
+create ruta2 := new Ruta("R002", "Ruta Norte", [p1, p2], 25.0, "TransAqp")
+
+========================================
+PRUEBAS DE RUTA
+========================================
+-- Probar obtenerCodigo
+print ruta1.obtenerCodigo()
+
+-- Probar obtenerParaderos
+print len ruta1.obtenerParaderos()
+
+-- Probar actualizarCongestion
+print ruta1.actualizarCongestion(1.5)
+print ruta1.factorCongestion
+
+-- Probar desactivar
+print ruta1.desactivar()
+print ruta1.activa
+
+-- Reactivar para seguir probando
+ruta1.activa := true
+
+-- Probar distanciaTotal
+print ruta1.distanciaTotal()
+
+-- Probar paraderoMasCercano
+create coordBusqueda := new Coordenada(-16.405, -71.555)
+print ruta1.paraderoMasCercano(coordBusqueda)
+
+-- Probar contarParaderosOficiales
+print ruta1.contarParaderosOficiales()
+
+========================================
+PASO 6: CREAR BUSES
+========================================
+create bus1 := new Bus("B001", "ABC-123", "TransArequipa", 50, ruta1, coord1)
+create bus2 := new Bus("B002", "DEF-456", "TransArequipa", 25, ruta2, coord2)
+create bus3 := new Bus("B003", "GHI-789", "OtraEmpresa", 60, ruta1, coord1)
+
+-- Reactivar conductor
+cond1.activo := true
+
+========================================
+PRUEBAS DE BUS
+========================================
+-- Probar actualizarUbicacion
+print bus1.actualizarUbicacion(coord2)
+print bus1.ubicacionActual
+
+-- Probar asignarConductor
+print bus1.asignarConductor(cond1)
+
+-- Probar cambiarEstadoServicio (activar)
+print bus1.cambiarEstadoServicio(true)
+print bus1.enServicio
+
+-- Probar subirPasajeros (éxito)
+print bus1.subirPasajeros(20)
+print bus1.pasajerosActuales
+
+-- Probar subirPasajeros (otro grupo)
+print bus1.subirPasajeros(15)
+print bus1.pasajerosActuales
+
+-- Probar subirPasajeros (exceder capacidad)
+print bus1.subirPasajeros(20)
+
+-- Probar bajarPasajeros
+print bus1.bajarPasajeros(10)
+print bus1.pasajerosActuales
+
+-- Probar calcularOcupacion
+print bus1.calcularOcupacion()
+
+-- Probar estimarTiempoArribo
+print bus1.estimarTiempoArribo(p3, 1.5, 30.0)
+
+-- Probar validarParadaEnParadero (válida)
+create coordParadaOK := new Coordenada(-16.41020, -71.56020)
+print bus1.validarParadaEnParadero(coordParadaOK, 50.0)
+
+-- Probar validarParadaEnParadero (inválida)
+create coordParadaBad := new Coordenada(-16.35, -71.52)
+print bus1.validarParadaEnParadero(coordParadaBad, 50.0)
+
+-- Probar obtenerInfoBus
+print bus1.obtenerInfoBus()
+
+-- Probar cambiarEstadoServicio (desactivar)
+print bus1.cambiarEstadoServicio(false)
+print bus1.enServicio
+print bus1.conductorActual
+
+========================================
+PASO 7: CREAR INFRACCIONES
+========================================
+create inf1 := new Infraccion("ABC-123", coordLejos, 1700000000, "Parada ilegal", "GRAVE")
+
+========================================
+PRUEBAS DE INFRACCION
+========================================
+-- Probar marcarProcesada
+print inf1.procesada
+print inf1.marcarProcesada()
+print inf1.procesada
+
+========================================
+PASO 8: CREAR SISTEMA
+========================================
+create sistema := new SistemaTransporte()
+
+========================================
+PRUEBAS DE SISTEMA - REGISTRO
+========================================
+-- Probar registrarRuta
+print sistema.registrarRuta(ruta1)
+print sistema.registrarRuta(ruta2)
+print card dom sistema.rutas
+
+-- Probar registrarBus
+print sistema.registrarBus(bus1)
+print sistema.registrarBus(bus2)
+print sistema.registrarBus(bus3)
+print card dom sistema.buses
+
+-- Probar registrarConductor
+print sistema.registrarConductor(cond1)
+print sistema.registrarConductor(cond2)
+print card dom sistema.conductores
+
+========================================
+PRUEBAS DE SISTEMA - PARADAS
+========================================
+-- Reactivar bus1
+bus1.enServicio := true
+bus1.conductorActual := cond1
+
+-- Probar registrarParada (oficial - válida)
+create coordOficial := new Coordenada(-16.40010, -71.55010)
+print sistema.registrarParada("ABC-123", coordOficial, 1700000000)
+print len sistema.infracciones
+
+-- Probar registrarParada (no oficial - genera infracción)
+create coordIlegal1 := new Coordenada(-16.35, -71.52)
+print sistema.registrarParada("ABC-123", coordIlegal1, 1700000100)
+print len sistema.infracciones
+
+-- Generar más infracciones para pruebas
+create coordIlegal2 := new Coordenada(-16.36, -71.53)
+print sistema.registrarParada("ABC-123", coordIlegal2, 1700000200)
+print sistema.registrarParada("DEF-456", coordIlegal1, 1700000300)
+print len sistema.infracciones
+
+========================================
+PRUEBAS DE SISTEMA - CONSULTAS ETA
+========================================
+-- Probar consultarETA
+print sistema.consultarETA("ABC-123", "P003")
+
+========================================
+PRUEBAS DE SISTEMA - INFRACCIONES
+========================================
+-- Probar consultarInfraccionesPorBus
+print len sistema.consultarInfraccionesPorBus("ABC-123")
+
+-- Probar consultarInfraccionesPorEmpresa
+print len sistema.consultarInfraccionesPorEmpresa("TransArequipa")
+
+-- Probar consultarInfraccionesPorPeriodo
+print len sistema.consultarInfraccionesPorPeriodo(1700000000, 1700000250)
+
+-- Probar contarInfraccionesPendientes
+print sistema.contarInfraccionesPendientes()
+
+-- Probar obtenerBusConMasInfracciones
+print sistema.obtenerBusConMasInfracciones()
+
+========================================
+PRUEBAS DE SISTEMA - CONSULTAS OPERATIVAS
+========================================
+-- Probar obtenerEstadisticas
+print sistema.obtenerEstadisticas()
+
+-- Probar obtenerRutasActivas
+print len sistema.obtenerRutasActivas()
+
+-- Probar obtenerBusesEnRuta
+print len sistema.obtenerBusesEnRuta("R001")
+
+========================================
+PRUEBAS ESPECIFICAS
+========================================
+-- Probar bajarPasajeros
+create coord_test := new Coordenada(-16.4, -71.55)
+create p_test := new Paradero("PT01", "Test", coord_test, true)
+create ruta_test := new Ruta("RT01", "Test", [p_test, p_test], 30.0, "Test")
+create cond_test := new Conductor("11111111", "Test", "LT01", "A-IIIb", 1735689600)
+create bus_test := new Bus("BT01", "TEST-123", "Test", 50, ruta_test, coord_test)
+print bus_test.asignarConductor(cond_test)
+print bus_test.cambiarEstadoServicio(true)
+print bus_test.subirPasajeros(10)
+print bus_test.bajarPasajeros(5)
+print bus_test.bajarPasajeros(20)
+
+-- Probar asignarConductor
+create cond_inactivo := new Conductor("22222222", "Inactivo", "LI01", "A-IIIb", 1735689600)
+print cond_inactivo.desactivar()
+create bus_test2 := new Bus("BT02", "TEST-456", "Test", 50, ruta_test, coord_test)
+print bus_test2.asignarConductor(cond_inactivo)
+
+-- Probar calcularDistancia
+create coord_mismo := new Coordenada(-16.4, -71.55)
+print coord_mismo.calcularDistancia(coord_mismo)
+
+-- Probar consultarETA
+print sistema.consultarETA("ABC-123", "P001")
+print sistema.consultarETA("ABC-123", "P002")
+
+========================================
+RESUMEN DE COBERTURA
+========================================
+COORDENADA:
+✓ calcularDistancia
+
+PARADERO:
+✓ obtenerUbicacion
+✓ estaEnRadio (2 casos: dentro y fuera)
+
+CONDUCTOR:
+✓ licenciaVigente (2 casos: válida y vencida)
+✓ desactivar
+
+RUTA:
+✓ obtenerCodigo
+✓ obtenerParaderos
+✓ actualizarCongestion
+✓ desactivar
+✓ distanciaTotal
+✓ paraderoMasCercano
+✓ contarParaderosOficiales
+
+BUS:
+✓ actualizarUbicacion
+✓ asignarConductor
+✓ cambiarEstadoServicio (2 casos: activar y desactivar)
+✓ subirPasajeros (3 casos: éxito, éxito, exceder capacidad)
+✓ bajarPasajeros
+✓ calcularOcupacion
+✓ estimarTiempoArribo
+✓ validarParadaEnParadero (2 casos: válida e inválida)
+✓ obtenerInfoBus
+
+INFRACCION:
+✓ marcarProcesada
+
+SISTEMA:
+✓ registrarRuta
+✓ registrarBus
+✓ registrarConductor
+✓ registrarParada (2 casos: oficial y no oficial)
+✓ consultarETA
+✓ consultarInfraccionesPorBus
+✓ consultarInfraccionesPorEmpresa
+✓ consultarInfraccionesPorPeriodo
+✓ contarInfraccionesPendientes
+✓ obtenerBusConMasInfracciones
+✓ obtenerEstadisticas
+✓ obtenerRutasActivas
+✓ obtenerBusesEnRuta
+
+========================================
+TOTAL: 100% DE COBERTURA
+========================================

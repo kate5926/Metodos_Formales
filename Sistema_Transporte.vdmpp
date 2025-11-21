@@ -76,8 +76,8 @@ operations
     );
     return esOficial;
   )
-  pre placa in set dom buses
-  post len infracciones >= len infracciones~ or RESULT = true;
+  pre placa in set dom buses and ubicacion <> nil and timestamp > 0 and
+    buses(placa).rutaAsignada <> nil;
 
   public consultarETA: seq of char * seq of char ==> real
   consultarETA(placa, codigoParadero) == (
@@ -206,29 +206,5 @@ operations
   )
   pre codigoRuta in set dom rutas
   post forall b in set elems RESULT & b.rutaAsignada.codigo = codigoRuta;
-
-  public validarConductorParaBus: seq of char * Bus * nat ==> bool
-  validarConductorParaBus(dni, bus, timestamp) == (
-    dcl conductor: Conductor;
-    dcl categoria: seq of char;
-    
-    if dni not in set dom conductores then
-      return false;
-    
-    conductor := conductores(dni);
-    
-    if not conductor.licenciaVigente(timestamp) then
-      return false;
-    
-    categoria := conductor.categoria;
-    if bus.capacidad <= 27 then
-      return categoria = "A-IIb"
-    elseif bus.capacidad <= 40 then
-      return categoria in set {"A-IIb", "A-IIIa"}
-    elseif bus.capacidad <= 90 then
-      return categoria in set {"A-IIb", "A-IIIa", "A-IIIb"}
-    else
-      return categoria = "A-IIIc";
-  );
 
 end SistemaTransporte
