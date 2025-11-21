@@ -1,28 +1,17 @@
--- CLASE: Conductor
--- Descripción: Representa un conductor autorizado
--- Responsabilidad: Validación de licencias según normativa MTC
-
 class Conductor
 
 instance variables
-  public dni: seq of char;              -- DNI del conductor (8 dígitos)
-  public nombreCompleto: seq of char;   -- Nombre completo
-  public licencia: seq of char;         -- Número de licencia
-  public categoria: seq of char;        -- Categoría según MTC
-  public fechaVencimiento: nat;         -- Timestamp de vencimiento
-  public activo: bool;                  -- Estado del conductor
+  public dni: seq of char := "00000000";
+  public nombreCompleto: seq of char := "";
+  public licencia: seq of char := "";
+  public categoria: seq of char := "A-IIb";
+  public fechaVencimiento: nat := 0;
+  public activo: bool := false;
 
-inv -- INVARIANTES:
-    len dni = 8 and
+inv len dni = 8 and
     categoria in set {"A-IIb", "A-IIIa", "A-IIIb", "A-IIIc"};
-    -- Categorías según Reglamento Nacional de Licencias MTC:
-    -- A-IIb:  Hasta 27 pasajeros (combis)
-    -- A-IIIa: Hasta 40 pasajeros (microbuses)
-    -- A-IIIb: Hasta 90 pasajeros (buses estándar)
-    -- A-IIIc: Buses articulados
 
 operations
-  -- Constructor
   public Conductor: seq of char * seq of char * seq of char * seq of char * nat ==> Conductor
   Conductor(d, nombre, lic, cat, fecha) == (
     dni := d;
@@ -37,18 +26,22 @@ operations
   post dni = d and nombreCompleto = nombre and licencia = lic and 
        categoria = cat and fechaVencimiento = fecha and activo = true;
 
-  -- Verifica si la licencia está vigente en un momento dado
   public licenciaVigente: nat ==> bool
   licenciaVigente(timestamp) == (
     return activo and timestamp <= fechaVencimiento;
   )
   post RESULT = (activo and timestamp <= fechaVencimiento);
 
-  -- Desactiva al conductor
   public desactivar: () ==> ()
   desactivar() == (
     activo := false;
   )
   post activo = false;
+
+  public activar: () ==> ()
+  activar() == (
+    activo := true;
+  )
+  post activo = true;
 
 end Conductor

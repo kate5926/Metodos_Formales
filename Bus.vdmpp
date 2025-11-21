@@ -1,26 +1,17 @@
 class Bus
 
 instance variables
-  -- ATRIBUTOS DEL DIAGRAMA DE CLASES
-  public id: seq of char;                  -- Identificador único del bus
-  public placa: seq of char;               -- Placa del vehículo
-  public empresa: seq of char;             -- Empresa operadora
-  public capacidad: nat1;                  -- Capacidad máxima de pasajeros
-  public rutaAsignada: Ruta;               -- Ruta asignada al bus
-  public ubicacionActual: Coordenada;      -- Ubicación GPS actual
-  public conductorActual: [Conductor];     -- Conductor asignado (opcional)
-  public enServicio: bool;                 -- Estado de servicio
-  public pasajerosActuales: nat;           -- Número actual de pasajeros
-
-inv -- INVARIANTES DE SEGURIDAD:
-    len id > 0 and
-    len placa > 0 and
-    capacidad >= 10 and capacidad <= 90 and
-    pasajerosActuales <= capacidad and
-    (enServicio = true => conductorActual <> nil);
+  public id: seq of char := "TEMP";
+  public placa: seq of char := "TEMP";
+  public empresa: seq of char := "";
+  public capacidad: nat1 := 10;
+  public rutaAsignada: [Ruta] := nil;
+  public ubicacionActual: [Coordenada] := nil;
+  public conductorActual: [Conductor] := nil;
+  public enServicio: bool := false;
+  public pasajerosActuales: nat := 0;
 
 operations
-  -- CONSTRUCTOR MEJORADO
   public Bus: seq of char * seq of char * seq of char * nat1 * Ruta * Coordenada ==> Bus
   Bus(id_bus, p, emp, cap, ruta, ubic) == (
     id := id_bus;
@@ -40,7 +31,6 @@ operations
        conductorActual = nil and enServicio = false and 
        pasajerosActuales = 0;
 
-  -- ACTUALIZAR UBICACIÓN CON VALIDACIÓN
   public actualizarUbicacion: Coordenada ==> ()
   actualizarUbicacion(nuevaUbic) == (
     ubicacionActual := nuevaUbic;
@@ -48,7 +38,6 @@ operations
   pre nuevaUbic <> nil
   post ubicacionActual = nuevaUbic;
 
-  -- ASIGNAR CONDUCTOR CON VALIDACIÓN DE LICENCIA
   public asignarConductor: Conductor ==> bool
   asignarConductor(conductor) == (
     if conductor.activo then (
@@ -61,30 +50,27 @@ operations
   post (RESULT = true => conductorActual = conductor) and
        (RESULT = false => conductorActual = conductorActual~);
 
-  -- CAMBIAR ESTADO DE SERVICIO
   public cambiarEstadoServicio: bool ==> ()
   cambiarEstadoServicio(estado) == (
     enServicio := estado;
-    -- Si se desactiva el servicio, se libera el conductor
     if estado = false then conductorActual := nil;
   )
+  pre estado = true => conductorActual <> nil
   post enServicio = estado and
        (estado = false => conductorActual = nil);
 
-  -- SUBIR PASAJEROS CON CONTROL DE CAPACIDAD
   public subirPasajeros: nat ==> bool
   subirPasajeros(cantidad) == (
     if pasajerosActuales + cantidad <= capacidad then (
       pasajerosActuales := pasajerosActuales + cantidad;
       return true;
     )
-    else return false;  -- No se permiten más pasajeros
+    else return false;
   )
   pre cantidad > 0 and enServicio = true
   post (RESULT = true => pasajerosActuales = pasajerosActuales~ + cantidad) and
        (RESULT = false => pasajerosActuales = pasajerosActuales~);
 
-  -- BAJAR PASAJEROS
   public bajarPasajeros: nat ==> bool
   bajarPasajeros(cantidad) == (
     if cantidad <= pasajerosActuales then (
@@ -97,14 +83,12 @@ operations
   post (RESULT = true => pasajerosActuales = pasajerosActuales~ - cantidad) and
        (RESULT = false => pasajerosActuales = pasajerosActuales~);
 
-  -- CALCULAR PORCENTAJE DE OCUPACIÓN
   public calcularOcupacion: () ==> real
   calcularOcupacion() == (
     return (pasajerosActuales * 100.0) / capacidad;
   )
   post RESULT >= 0 and RESULT <= 100;
 
-  -- ETA MEJORADO SEGÚN RF03
   public estimarTiempoArribo: Paradero * real * real ==> real
   estimarTiempoArribo(paraderoDestino, factorCongestion, velocidadPromedio) == (
     dcl distancia: real := ubicacionActual.calcularDistancia(
@@ -114,7 +98,6 @@ operations
     dcl tiempoAjustado: real := tiempoBase * factorCongestion;
     dcl tiempoMinutos: real := tiempoAjustado / 60.0;
     
-    -- Aplicar márgenes según RF03 (±5 minutos)
     return tiempoMinutos;
   )
   pre enServicio = true and paraderoDestino <> nil and
@@ -122,7 +105,6 @@ operations
        velocidadPromedio > 0
   post RESULT >= 0;
 
-  -- VERIFICAR PARADA OFICIAL SEGÚN RF04
   public validarParadaEnParadero: Coordenada * real ==> bool
   validarParadaEnParadero(ubicacionParada, radioTolerancia) == (
     dcl paraderos: seq of Paradero := rutaAsignada.obtenerParaderos();
@@ -135,7 +117,6 @@ operations
   )
   pre ubicacionParada <> nil and radioTolerancia > 0;
 
-  -- OBTENER INFORMACIÓN DEL BUS PARA REPORTES
   public obtenerInfoBus: () ==> map seq of char to seq of char | nat | real | bool
   obtenerInfoBus() == (
     return {

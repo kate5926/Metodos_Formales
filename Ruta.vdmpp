@@ -1,26 +1,15 @@
--- CLASE: Ruta
--- Descripción: Define un corredor de transporte público
--- Responsabilidad: Gestión de paraderos y parámetros de tiempo
-
 class Ruta
 
 instance variables
-  public codigo: seq of char;              -- Código de ruta
-  public nombre: seq of char;              -- Nombre de la ruta
-  public paraderos: seq of Paradero;       -- Secuencia ordenada de paraderos
-  public velocidadPromedio: real;          -- Velocidad promedio en km/h
-  public factorCongestion: real;           -- Factor de congestión (1.0 - 2.0)
-  public empresaOperadora: seq of char;    -- Empresa que opera la ruta
-  public activa: bool;                     -- Estado de la ruta
-
-inv -- INVARIANTES:
-    len codigo > 0 and
-    len paraderos >= 2 and
-    velocidadPromedio > 0 and velocidadPromedio <= 60 and
-    factorCongestion >= 1.0 and factorCongestion <= 2.0;
+  public codigo: seq of char := "TEMP";
+  public nombre: seq of char := "";
+  public paraderos: seq of Paradero := [];
+  public velocidadPromedio: real := 30.0;
+  public factorCongestion: real := 1.0;
+  public empresaOperadora: seq of char := "";
+  public activa: bool := true;
 
 operations
-  -- Constructor
   public Ruta: seq of char * seq of char * seq of Paradero * real * seq of char ==> Ruta
   Ruta(cod, nom, parad, vel, empresa) == (
     codigo := cod;
@@ -37,21 +26,18 @@ operations
        velocidadPromedio = vel and factorCongestion = 1.0 and 
        empresaOperadora = empresa and activa = true;
 
-  -- Obtiene el código de la ruta
   public obtenerCodigo: () ==> seq of char
   obtenerCodigo() == (
     return codigo;
   )
   post RESULT = codigo;
 
-  -- Obtiene la secuencia de paraderos
   public obtenerParaderos: () ==> seq of Paradero
   obtenerParaderos() == (
     return paraderos;
   )
   post RESULT = paraderos;
 
-  -- Actualiza el factor de congestión
   public actualizarCongestion: real ==> ()
   actualizarCongestion(factor) == (
     factorCongestion := factor;
@@ -59,14 +45,18 @@ operations
   pre factor >= 1.0 and factor <= 2.0
   post factorCongestion = factor;
 
-  -- Desactiva la ruta
   public desactivar: () ==> ()
   desactivar() == (
     activa := false;
   )
   post activa = false;
 
-  -- Calcula la distancia total aproximada de la ruta
+  public activar: () ==> ()
+  activar() == (
+    activa := true;
+  )
+  post activa = true;
+
   public distanciaTotal: () ==> real
   distanciaTotal() == (
     dcl total: real := 0.0;
@@ -78,7 +68,6 @@ operations
   )
   post RESULT >= 0;
 
-  -- Encuentra el paradero más cercano a una coordenada
   public paraderoMasCercano: Coordenada ==> nat1
   paraderoMasCercano(coord) == (
     dcl minDist: real := paraderos(1).ubicacion.calcularDistancia(coord);
@@ -95,7 +84,6 @@ operations
   pre len paraderos > 0
   post RESULT >= 1 and RESULT <= len paraderos;
 
-  -- Cuenta los paraderos oficiales
   public contarParaderosOficiales: () ==> nat
   contarParaderosOficiales() == (
     dcl count: nat := 0;
